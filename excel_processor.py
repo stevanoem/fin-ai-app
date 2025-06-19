@@ -20,9 +20,13 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Table, TableStyle #
 # from reportlab.lib.units import mm # mm not used
 from reportlab.lib.utils import ImageReader
 
-pdfmetrics.registerFont(TTFont('LibreBaskerville-Regular', r'assets\LibreBaskerville-Regular.ttf', 'UTF-8'))
-pdfmetrics.registerFont(TTFont('LibreBaskerville-Bold', r'assets\LibreBaskerville-Bold.ttf', 'UTF-8'))
-pdfmetrics.registerFont(TTFont('LibreBaskerville-Italic', r'assets\LibreBaskerville-Italic.ttf', 'UTF-8'))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+font_path = os.path.join(BASE_DIR, "assets", "LibreBaskerville-Regular.ttf")
+pdfmetrics.registerFont(TTFont('LibreBaskerville-Regular', font_path, 'UTF-8'))
+font_path = os.path.join(BASE_DIR, "assets", "LibreBaskerville-Bold.ttf")
+pdfmetrics.registerFont(TTFont('LibreBaskerville-Bold', font_path, 'UTF-8'))
+font_path = os.path.join(BASE_DIR, "assets", "LibreBaskerville-Italic.ttf")
+pdfmetrics.registerFont(TTFont('LibreBaskerville-Italic', font_path, 'UTF-8'))
 
 pdfmetrics.registerFontFamily(
     'LibreBaskerville',
@@ -42,7 +46,7 @@ LOCAL_EXCEL_DIR = "input"
 LOCAL_OUTPUT_BASE_DIR = "output"
 
 # Full path to your logo image file
-LOCAL_LOGO_FILE = r"assets\dmd_logo.png"
+LOCAL_LOGO_FILE = os.path.join(BASE_DIR, "assets", "dmd_logo.png")
 
 # Flag to control AI comment regeneration. Set to True to always regenerate.
 REGENERATE_AI_COMMENT = True
