@@ -149,6 +149,7 @@ else:
         st.session_state['original_file_name'] = ''
         st.session_state['json_content_for_display'] = ''
         st.session_state['timestamp'] = ''
+        st.session_state['log_uploaded'] = False
         logger.info("Session state inicijalizovan. Aplikacija čeka fajl.")
 
     # --- KONTROLA TOKA APLIKACIJE ---
@@ -384,7 +385,35 @@ else:
         st.subheader("AI Komentar:")
         st.text_area("Generisani AI Komentar:", st.session_state['ai_comment'], height=300, key="ai_comment_display")
 
-        if st.session_state.get('ai_comment_path'):
+        if not st.session_state.get('log_uploaded'):
+
+            if st.session_state.get('ai_comment_path'):
+                creds = google_drive_auth(logger)
+                if creds:
+                    try:
+                        DRIVE_FOLDER_ID = st.secrets["google_drive_folder"]["folder_id"]
+                    except KeyError:
+                        st.error("Nije pronađen ID Google Drive foldera u secrets.toml!")
+                        DRIVE_FOLDER_ID = None
+
+                    if DRIVE_FOLDER_ID:
+                        log_temp_path = f"{st.session_state['timestamp'] +'_'+ st.session_state['user']}_app.log"
+
+                    
+                        shutil.copy(LOG_PATH, log_temp_path)
+
+                        log_drive_id = upload_drive(log_temp_path, creds, DRIVE_FOLDER_ID)
+                        if log_drive_id:
+                            logger.info(f"Log fajl uspešno uploadovan na Google Drive. ID: {log_drive_id}")
+                        else:
+                            st.error("Došlo je do greške prilikom upload-a log fajla na Google Drive.")
+
+                        os.remove(log_temp_path)
+                        st.session_state['log_uploaded'] = True
+
+            #Ciscenje log fajla
+            open(LOG_PATH, 'w').close()
+            logger.info("Log fajl uspešno ispražnjen.")
             
             try:
                 # Open the generated PDF file and provide download button
@@ -406,33 +435,8 @@ else:
     
         if st.button("Pokreni novu analizu"):
 
-            creds = google_drive_auth(logger)
-            if creds:
-                try:
-                    DRIVE_FOLDER_ID = st.secrets["google_drive_folder"]["folder_id"]
-                except KeyError:
-                    st.error("Nije pronađen ID Google Drive foldera u secrets.toml!")
-                    DRIVE_FOLDER_ID = None
-
-                if DRIVE_FOLDER_ID:
-                    log_temp_path = f"{st.session_state['timestamp'] +'_'+ st.session_state['user']}_app.log"
-
-                
-                    shutil.copy(LOG_PATH, log_temp_path)
-
-                    log_drive_id = upload_drive(log_temp_path, creds, DRIVE_FOLDER_ID)
-                    if log_drive_id:
-                        logger.info(f"Log fajl uspešno uploadovan na Google Drive. ID: {log_drive_id}")
-                    else:
-                        st.error("Došlo je do greške prilikom upload-a log fajla na Google Drive.")
-
-                    os.remove(log_temp_path)
-
-            #Ciscenje log fajla
-            open(LOG_PATH, 'w').close()
-            logger.info("Log fajl uspešno ispražnjen.")
-
             #Resetovanje stanja
             st.session_state['current_stage'] = 'waiting_for_file'
+            st.session_state['log_uploaded'] = False
             logger.info("Pokretanje nove analize.")
             st.rerun()
