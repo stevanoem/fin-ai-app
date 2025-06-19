@@ -4,6 +4,7 @@ import shutil
 from datetime import datetime
 import pandas as pd
 import json
+import hashlib
 
 import streamlit as st
 import logging
@@ -20,6 +21,17 @@ LOG_PATH = os.path.join(LOCAL_OUTPUT_BASE_DIR, "app.log")
 os.makedirs(LOCAL_OUTPUT_BASE_DIR, exist_ok=True)
 API_KEY = st.secrets["api_keys"]["openai"]
 
+def hesiraj_lozinku(lozinka: str) -> str:
+    # Pretvaramo lozinku u bajtove
+    lozinka_bytes = lozinka.encode('utf-8')
+    # Pravimo SHA-256 heš objekat
+    sha256 = hashlib.sha256()
+    # Dodajemo bajtove lozinke u heš objekat
+    sha256.update(lozinka_bytes)
+    # Vraćamo heš u heksadecimalnom obliku (string)
+    return sha256.hexdigest()
+
+
 
 def check_password():
     """ True ako je šifra tačna."""
@@ -30,7 +42,7 @@ def check_password():
         if password:
             try:
                 # u hex
-                entered_password_hex = password.encode('utf-8').hex()
+                entered_password_hex = hesiraj_lozinku(password)
                 # Preuzmi tačnu hex šifru iz st.secrets
                 correct_password_hex1 = st.secrets["auth1"]["password_hex"]
                 correct_password_hex2 = st.secrets["auth2"]["password_hex"]
