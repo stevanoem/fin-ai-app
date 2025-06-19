@@ -46,6 +46,11 @@ def check_password():
                 # Preuzmi tačnu hex šifru iz st.secrets
                 correct_password_hex1 = st.secrets["auth1"]["password_hex"]
                 correct_password_hex2 = st.secrets["auth2"]["password_hex"]
+                correct_password_hex3 = st.secrets["auth3"]["password_hex"]
+                correct_password_hex4 = st.secrets["auth4"]["password_hex"]
+                correct_password_hex5 = st.secrets["auth5"]["password_hex"]
+                correct_password_hex6 = st.secrets["auth6"]["password_hex"]
+                correct_password_hex7 = st.secrets["auth7"]["password_hex"]
 
                 if entered_password_hex == correct_password_hex1:
                     st.session_state["authenticated"] = True
@@ -55,6 +60,31 @@ def check_password():
                 elif entered_password_hex == correct_password_hex2:
                     st.session_state["authenticated"] = True
                     st.session_state['user'] = 'Stefan'
+                    # st.rerun() - stranica se odmah osvezi i prikaze app
+                    st.rerun()
+                elif entered_password_hex == correct_password_hex3:
+                    st.session_state["authenticated"] = True
+                    st.session_state['user'] = 'Daliborka'
+                    # st.rerun() - stranica se odmah osvezi i prikaze app
+                    st.rerun()
+                elif entered_password_hex == correct_password_hex4:
+                    st.session_state["authenticated"] = True
+                    st.session_state['user'] = 'Tina'
+                    # st.rerun() - stranica se odmah osvezi i prikaze app
+                    st.rerun()
+                elif entered_password_hex == correct_password_hex5:
+                    st.session_state["authenticated"] = True
+                    st.session_state['user'] = 'Jovan'
+                    # st.rerun() - stranica se odmah osvezi i prikaze app
+                    st.rerun()
+                elif entered_password_hex == correct_password_hex6:
+                    st.session_state["authenticated"] = True
+                    st.session_state['user'] = 'Novica'
+                    # st.rerun() - stranica se odmah osvezi i prikaze app
+                    st.rerun()
+                elif entered_password_hex == correct_password_hex7:
+                    st.session_state["authenticated"] = True
+                    st.session_state['user'] = 'Marko'
                     # st.rerun() - stranica se odmah osvezi i prikaze app
                     st.rerun()
                 else:
