@@ -10,6 +10,7 @@ import streamlit as st
 import logging
 
 from openai import OpenAI
+from openai import OpenAIError
 
 from excel_processor import to_JSON, generate_AIcomment, shorter_text, generate_PDF
 from google_drive_utils import upload_drive, google_drive_auth
@@ -150,12 +151,19 @@ else:
         st.session_state['json_content_for_display'] = ''
         st.session_state['timestamp'] = ''
         st.session_state['log_uploaded'] = False
+        st.session_state['file_error'] =''
+        st.session_state['openai_error']=''
         logger.info("Session state inicijalizovan. Aplikacija čeka fajl.")
 
     # --- KONTROLA TOKA APLIKACIJE ---
 
     # --- FAZA 1: ČEKANJE FAJLA ---
     if st.session_state['current_stage'] == 'waiting_for_file':
+
+        if st.session_state.get('file_error'):
+            st.error(st.session_state['file_error'])
+            st.session_state['file_error'] = ''
+            
         uploaded_file = st.file_uploader(
             "Izaberi Excel fajl",
             type=["xls", "xlsx", "xlsm"]
@@ -180,6 +188,11 @@ else:
 
     # --- FAZA 2: FAJL UBAČEN, ČEKA SE ANALIZA ---
     elif st.session_state['current_stage'] == 'file_uploaded':
+
+        if st.session_state.get('openai_error'):
+            st.error(st.session_state['openai_error'])
+            st.session_state['openai_error'] = ''
+
         st.success(f"Fajl '{st.session_state['original_file_name']}' je spreman za analizu.")
 
         if st.button('Pokreni analizu'):
@@ -370,10 +383,23 @@ else:
                 st.rerun()
 
             
+            except OpenAIError as oe:
+                logger.error(f"Greška prilikom poziva OpenAI API-ja: {oe}")
+                st.error("Došlo je do problema sa AI servisom (OpenAI). Pokušajte ponovo kasnije.")
+                st.session_state['current_stage'] = 'file_uploaded'
+                st.session_state['openai_error'] = 'Došlo je do problema sa AI servisom (OpenAI). Pokušajte ponovo kasnije.'
+                st.rerun()
+
+            except (ValueError, KeyError, AttributeError, TypeError, IndexError) as ex:
+                logger.error(f"Greška prilikom čitanja fajla: {ex}")
+                st.error("Fajl nije u ispravnom formatu. Molimo izaberite ispravan fajl.")
+                st.session_state['current_stage'] = 'waiting_for_file'
+                st.session_state['file_error'] = "Fajl nije u ispravnom formatu. Molimo izaberite ispravan fajl."
+                st.rerun()
+
             except Exception as e:
-                logger.error(f"Došlo je do greške tokom analize: {e}")
-                st.error(f"Došlo je do greške tokom analize: {e}")
-                # Vrati korisnika na prethodni korak da može da pokuša ponovo
+                logger.error(f"Neočekivana greška tokom analize: {e}")
+                st.error("Došlo je do neočekivane greške tokom analize. Pokušajte ponovo.")
                 st.session_state['current_stage'] = 'file_uploaded'
                 st.rerun()
 
