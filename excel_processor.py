@@ -436,11 +436,28 @@ def formatiraj(x):
     return str(x) # Return original if not number
 
 def shorter_text(com):
-    start = com.find("**Ukupna procena:**")
-    if start == -1:
-        # Ne postoji, pa vrati ceo tekst ili neki fallback
-        return com
-    return com[start:].strip()
+    # Lokacija početka "Ukupna procena"
+    start_procena = com.find("**Ukupna procena:**")
+    # Lokacija početka "Preporuka"
+    end_procena = com.find("**Pozitivni indikatori:**")
+    start_preporuka = com.find("**Crvene zastavice / anomalije:**")
+    # Lokacija kraja "Preporuka" — uzmi prvi naredni pasus nakon toga
+    #end_preporuka = com.find("- **Na osnovu kombinovanog", start_preporuka)
+    
+    # Ako neki od ključnih delova fali, fallback
+    if start_procena == -1 or start_preporuka == -1:
+        return com  # možeš i `return ""` ako hoćeš prazan string
+    
+    #if end_preporuka == -1:
+     #   preporuka_part = com[start_preporuka:].strip()
+    #else:
+    #    preporuka_part = com[start_preporuka:end_preporuka].strip()
+
+    procena_part = com[start_procena:end_procena].strip()
+    preporuka_part = com[start_preporuka:].strip()
+
+    # Spoji oba dela
+    return procena_part + "\n\n" + preporuka_part
 
 def create_pdf(title_firm_name, output_filename, items, kl, image_paths, content_ai, table_data):
     print(f"Formiranje PDF-a za {title_firm_name}")

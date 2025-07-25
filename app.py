@@ -153,6 +153,7 @@ else:
         st.session_state['log_uploaded'] = False
         st.session_state['file_error'] =''
         st.session_state['openai_error']=''
+        st.session_state['upload_in_progress'] = False
         logger.info("Session state inicijalizovan. Aplikacija čeka fajl.")
 
     # --- KONTROLA TOKA APLIKACIJE ---
@@ -186,6 +187,7 @@ else:
             
             st.rerun()
 
+# TODO iskljuci dugme za pokretanje analize dok traje ubacivanje na drive
     # --- FAZA 2: FAJL UBAČEN, ČEKA SE ANALIZA ---
     elif st.session_state['current_stage'] == 'file_uploaded':
 
@@ -195,30 +197,27 @@ else:
 
         st.success(f"Fajl '{st.session_state['original_file_name']}' je spreman za analizu.")
 
-        if st.button('Pokreni analizu'):
+        if not st.session_state.get('upload_in_progress', False):
+            if st.button('Pokreni analizu'):
+                st.session_state['upload_in_progress'] = True
+                st.rerun()
+        else:
+            #  upload_in_progress postavljen
             creds = google_drive_auth(logger)
             if creds:
-                try:
-                    DRIVE_FOLDER_ID = st.secrets["google_drive_folder"]["folder_id"]
-                except KeyError:
-                    st.error("Nije pronađen ID Google Drive foldera u secrets.toml!")
-                    DRIVE_FOLDER_ID = None
-
-                if DRIVE_FOLDER_ID:
-                    korisnicki_fajl_putanja = st.session_state['uploaded_file_path']
-                    drive_id = upload_drive(korisnicki_fajl_putanja, creds, DRIVE_FOLDER_ID)
-
-                    if drive_id:
-                        logger.info(f"Fajl uspešno uploadovan. Drive ID: {drive_id}")
-                        st.success(f"Fajl uspešno postavljen na Google Drive. ID: {drive_id}")
-                        st.session_state['current_stage'] = 'analysis_in_progress'
-                        st.rerun()
-                    else:
-                        st.error("Došlo je do greške prilikom upload-a na Google Drive.")
-                        st.session_state['current_stage'] = 'file_uploaded'
+                drive_folder_id = st.secrets["google_drive_folder"]["folder_id"]
+                file_id = upload_drive(st.session_state['uploaded_file_path'], creds, drive_folder_id, logger)
+                if file_id:
+                    st.success(f"Fajl uspešno uploadovan! ID: {file_id}")
+                    st.session_state['current_stage'] = 'analysis_in_progress'
+                    st.rerun()
+                else:
+                    st.error("Upload fajla nije uspeo.")
+                    st.session_state['upload_in_progress'] = False  # Resetuj
             else:
-                st.error("Autentifikacija nije uspela.")
-                st.session_state['current_stage'] = 'file_uploaded'
+                st.error("Nije uspela autentifikacija za Google Drive.")
+                st.session_state['upload_in_progress'] = False
+                
 
     # --- FAZA 3: ANALIZA U TOKU ---
     elif st.session_state['current_stage'] == 'analysis_in_progress':
@@ -338,46 +337,47 @@ else:
 
                 st.session_state['ai_comment_path'] = ai_comment_local_file
 
+                
                 # --- Upload JSON i AI komentar na Google Drive ---
                 creds = google_drive_auth(logger)
                 if creds:
-                    try:
-                        DRIVE_FOLDER_ID = st.secrets["google_drive_folder"]["folder_id"]
-                    except KeyError:
-                        st.error("Nije pronađen ID Google Drive foldera u secrets.toml!")
-                        DRIVE_FOLDER_ID = None
-
-                    if DRIVE_FOLDER_ID:
-                        # Upload JSON fajla
-
-                        json_drive_id = upload_drive(json_output_path, creds, DRIVE_FOLDER_ID)
-                        if json_drive_id:
-                            logger.info(f"JSON fajl uspešno uploadovan na Google Drive. ID: {json_drive_id}")
+                        # Upload JSON (.json)
+                        drive_folder_id = st.secrets["google_drive_folder"]["folder_id"]
+                        file_id = upload_drive(json_output_path, creds, drive_folder_id, logger)
+                        if file_id:
+                            st.success(f"Fajl uspešno uploadovan! ID: {file_id}")
+                            logger.info(f"JSON uspešno uploadovan na Google Drive. ID: {drive_folder_id }")
                         else:
-                            logger.warning("Upload JSON fajla nije uspeo.")
-
+                            st.error("Upload fajla nije uspeo.")
+                        
                         # Upload AI komentara (.txt)
-                        ai_comment_drive_id = upload_drive(ai_comment_local_file, creds, DRIVE_FOLDER_ID)
-                        if ai_comment_drive_id:
-                            logger.info(f"AI komentar uspešno uploadovan na Google Drive. ID: {ai_comment_drive_id}")
+                        drive_folder_id = st.secrets["google_drive_folder"]["folder_id"]
+                        file_id = upload_drive(ai_comment_local_file, creds, drive_folder_id, logger)
+                        if file_id:
+                            st.success(f"Fajl ai kom uspešno uploadovan! ID: {file_id}")
+                            logger.info(f"AI komentar uspešno uploadovan na Google Drive. ID: {drive_folder_id }")
                         else:
-                            logger.warning("Upload AI komentara nije uspeo.")
+                            st.error("Upload fajla nije uspeo.")
+
+                            
                 else:
                     st.error("Autentifikacija za Google Drive nije uspela. Fajlovi nisu uploadovani.")
                     logger.error("Google Drive autentifikacija nije uspela.")
+                    
 
-                short_ai_text_for_pdf = shorter_text(ai_comment)
+                #short_ai_text_for_pdf = shorter_text(ai_comment)
+                #print(short_ai_text_for_pdf)
                 
-                pdf_output_dir = os.path.join('output', 'pdf')
-                os.makedirs(pdf_output_dir, exist_ok=True)
-                pdf_file_path = os.path.join(pdf_output_dir, f'{st.session_state["client_name"]}_kreditna_analiza.pdf')
+                #pdf_output_dir = os.path.join('output', 'pdf')
+                #os.makedirs(pdf_output_dir, exist_ok=True)
+                #pdf_file_path = os.path.join(pdf_output_dir, f'{st.session_state["client_name"]}_kreditna_analiza.pdf')
 
-                generate_PDF(pdf_file_path, excel_file_path, short_ai_text_for_pdf)
+                #generate_PDF(pdf_file_path, excel_file_path, short_ai_text_for_pdf)
                 logger.info(f"TXT uspešno generisan: {ai_comment_local_file}")
 
                 # Saving result
                 st.session_state['ai_comment'] = ai_comment
-                st.session_state['pdf_path'] = pdf_file_path
+                #st.session_state['pdf_path'] = pdf_file_path
                 st.session_state['current_stage'] = 'analysis_done'
             
                 st.rerun()
@@ -400,7 +400,7 @@ else:
             except Exception as e:
                 logger.error(f"Neočekivana greška tokom analize: {e}")
                 st.error("Došlo je do neočekivane greške tokom analize. Pokušajte ponovo.")
-                st.session_state['current_stage'] = 'file_uploaded'
+                st.session_state['current_stage'] = 'waiting_for_file'
                 st.rerun()
 
     # --- FAZA 4: ANALIZA ZAVRŠENA, PRIKAZ REZULTATA ---
@@ -428,7 +428,7 @@ else:
                     
                         shutil.copy(LOG_PATH, log_temp_path)
 
-                        log_drive_id = upload_drive(log_temp_path, creds, DRIVE_FOLDER_ID)
+                        log_drive_id = upload_drive(log_temp_path, creds, DRIVE_FOLDER_ID, logger)
                         if log_drive_id:
                             logger.info(f"Log fajl uspešno uploadovan na Google Drive. ID: {log_drive_id}")
                         else:
@@ -464,5 +464,6 @@ else:
             #Resetovanje stanja
             st.session_state['current_stage'] = 'waiting_for_file'
             st.session_state['log_uploaded'] = False
+            st.session_state['upload_in_progress'] = False 
             logger.info("Pokretanje nove analize.")
             st.rerun()
